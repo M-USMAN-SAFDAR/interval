@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://interval-api-3r02.onrender.com"
+      "destination": "https://interval-api-3657.onrender.com"
     }
   ],
   "headers": [
