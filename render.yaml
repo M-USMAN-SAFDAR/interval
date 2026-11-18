@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: interval-api
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    healthCheckPath: /healthz
+    disk:
+      name: interval-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: INTERVAL_ENV
+        value: production
+      - key: INTERVAL_BIND
+        value: 0.0.0.0
+      - key: INTERVAL_DATA_DIR
+        value: /var/data/interval

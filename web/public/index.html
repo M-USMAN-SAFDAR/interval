@@ -1,0 +1,17 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0c1115"><title>Interval — Appointment Studio</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/portal.css"><link rel="stylesheet" href="/studio.css">
+<script defer src="/vendor/gsap.js"></script><script defer src="/vendor/scroll-trigger.js"></script><script defer src="/vendor/three.js"></script><script defer src="/studio.js"></script><script src="/portal.js" defer></script><script src="/api.js" defer></script><script src="/app.js" defer></script></head><body>
+<button id="menu-toggle" class="menu-toggle" aria-expanded="false" aria-controls="site-sidebar">☰ &nbsp; Menu</button>
+<aside id="site-sidebar" aria-label="Studio navigation">
+  <a href="#discover" class="brand" aria-label="Interval home"><i class="mark"><b></b><b></b><b></b></i>Interval<span>.</span></a>
+  <nav aria-label="Primary"><a href="#discover">Discover</a><a href="#access">Workspaces</a></nav>
+  <div id="workspace-links"></div>
+  <button class="workspace" id="roles">Account access</button>
+</aside>
+<div class="site-content"><main id="main"></main>
+<footer class="site-footer">
+  <div><a class="word" href="#discover">Interval.</a><p>Appointment Studio</p></div>
+  <div><strong>Explore</strong><a href="#discover">Discover services</a><a href="#access">Workspace access</a></div>
+  <div><strong>Accessibility</strong><button id="motion">Pause motion</button></div>
+</footer></div>
+<dialog id="modal" aria-label="Appointment studio"><div class="modal-head"><span class="eyebrow">INTERVAL STUDIO</span><button class="close" aria-label="Close dialog">×</button></div><div id="panel"></div></dialog><div id="toast" role="status"></div>
+</body></html>
