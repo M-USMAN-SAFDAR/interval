@@ -6,14 +6,11 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from flask import Response, request
-from backend.server import ADMIN_EMAIL, connect, create_app
+from backend.server import ADMIN_EMAIL, create_app
 
 
 def browser_app(directory):
     app = create_app(directory)
-    db = connect(app.config["DATABASE"])
-    key = db.execute("SELECT value FROM settings WHERE name='activation'").fetchone()[0]
-    db.close()
     password = secrets.token_urlsafe(18)
     @app.get("/__check")
     def check():
@@ -45,10 +42,10 @@ def browser_app(directory):
         response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("frame-ancestors 'none'","frame-ancestors 'self'")
         return response
     app.after_request_funcs[None][0]=embedded
-    if key:
+    if not app.test_client().get("/api/state").json.get("adminReady"):
         with app.test_client() as client:
             assert client.post("/api/register", json=dict(name="Test administrator", role="Administrator",
-                email=ADMIN_EMAIL,password=password,activation=key),headers={"X-Interval-Action":"1"}).status_code==201
+                email=ADMIN_EMAIL,password=password),headers={"X-Interval-Action":"1"}).status_code==201
 
     return app
 

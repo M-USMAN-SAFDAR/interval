@@ -28,18 +28,17 @@ function access(){main.innerHTML='<section class="portal"><div class="portal-int
 function wireTilt(){if(!matchMedia('(hover:hover)').matches)return;for(const card of main.querySelectorAll('.role-card,.visual-pane')){card.onpointermove=e=>{if(motionOff())return;const b=card.getBoundingClientRect();card.style.setProperty('--rx',((e.clientX-b.left)/b.width-.5)*14+'deg');card.style.setProperty('--ry',(.5-(e.clientY-b.top)/b.height)*10+'deg')};card.onpointerleave=()=>{card.style.removeProperty('--rx');card.style.removeProperty('--ry')}}}
 function field(name,label,type,extra=''){return '<label>'+label+'<input class="field" name="'+name+'" type="'+type+'" required '+extra+'></label>'}
 function authScreen(k,register){
- const r=rolesInfo[k],admin=k==='administrator',activated=data.adminReady;
+ const r=rolesInfo[k],admin=k==='administrator';
 
  let fields=register?field('name','Full name','text','autocomplete="name" maxlength="90"'):'';
  fields+=field('email',admin?'Administrator email':'Email address','email','autocomplete="username" '+(admin?'value="'+adminAddress+'" readonly':'placeholder="you@example.com"'));
  if(register&&k==='provider')fields+='<label>Service category<select name="category" required><option value="">Choose a category</option>'+Object.keys(categories).map(c=>'<option>'+c+'</option>').join('')+'</select></label>'+field('service','Primary service','text','placeholder="e.g. Mathematics tutoring" maxlength="90"')+'<label>Service description<textarea name="serviceDescription" required rows="2" maxlength="500" placeholder="What will the customer receive during this appointment?"></textarea></label><label>Professional background<textarea name="bio" required rows="2" maxlength="500" placeholder="Describe your expertise and experience"></textarea></label>';
  fields+='<label>Password<div class="pwd"><input class="field" id="password" name="password" required type="password" autocomplete="'+(register?'new-password':'current-password')+'" '+(register?'minlength="8" placeholder="At least 8 characters"':'')+'><button type="button" id="reveal" aria-label="Show password">'+icon('eye')+'</button></div></label>';
- if(register&&admin)fields+=field('activation','Setup key from server terminal','password','autocomplete="off"');
  if(register)fields+=field('confirm','Confirm password','password','autocomplete="new-password"');
- const locked=admin&&register&&activated;
+ const locked=admin&&register&&data.adminReady;
  const sameRole=main.querySelector('.auth-card')?.dataset.role===k;
  const priorMode=main.querySelector('.auth-card')?.classList.contains('signup');
- const switchText=register?'Login':admin&&!activated?'Activate account':'Sign up';
+ const switchText=register?'Login':admin&&!data.adminReady?'Activate account':'Sign up';
  const switchMode=register?'login':'register';
  const switchLink='<a class="switch-auth" href="#'+switchMode+'/'+k+'">'+switchText+'</a>';
  const remember=register?'':'<label class="remember"><input type="checkbox" name="remember"> Remember me</label>';

@@ -23,7 +23,6 @@ class Workflow(unittest.TestCase):
         self.provider = self.app.test_client()
         self.other = self.app.test_client()
         db = connect(self.path / "interval.sqlite3")
-        self.key = db.execute("SELECT value FROM settings WHERE name='activation'").fetchone()[0]
         db.close()
 
     def send(self, client, endpoint, payload, expected=200):
@@ -39,7 +38,7 @@ class Workflow(unittest.TestCase):
         return client.get("/api/state").json
 
     def prepare_booking(self):
-        self.register(self.admin,"Administrator",ADMIN_EMAIL,activation=self.key)
+        self.register(self.admin,"Administrator",ADMIN_EMAIL)
         pid=self.register(self.provider,"Provider","p@example.test",bio="Python tutor",category="Education",service="Lesson")
         self.register(self.customer,"Customer","c@example.test")
         self.register(self.other,"Customer","d@example.test")
@@ -94,9 +93,10 @@ class Workflow(unittest.TestCase):
         self.assertEqual(len(self.state(new_client)["bookings"]),2)
 
     def test_admin_activation_and_deactivation(self):
-        self.send(self.admin,"register",dict(role="Administrator",name="Admin",email=ADMIN_EMAIL,
-                  password=PASSWORD,activation="invalid"),403)
-        self.register(self.admin,"Administrator",ADMIN_EMAIL,activation=self.key)
+        self.register(self.admin,"Administrator",ADMIN_EMAIL)
+        # Second admin registration should fail
+        self.send(self.other,"register",dict(role="Administrator",name="Admin2",email=ADMIN_EMAIL,
+                  password=PASSWORD),403)
         uid=self.register(self.customer,"Customer","c@example.test")
         self.send(self.admin,f"users/{uid}",{"active":False})
         self.assertIsNone(self.state(self.customer)["user"])

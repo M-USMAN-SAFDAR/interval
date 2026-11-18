@@ -59,9 +59,7 @@ def make_demo(directory):
         password=secrets.token_urlsafe(16)
         submit(client,"register",dict(role=role,name=name,email=email,password=password,**fields))
         credentials.append((role,email,password))
-    with closing(connect(app.config["DATABASE"])) as db:
-        key=db.execute("SELECT value FROM settings WHERE name='activation'").fetchone()[0]
-    enroll(admin,"Administrator","Demo manager",ADMIN_EMAIL,activation=key)
+    enroll(admin,"Administrator","Demo manager",ADMIN_EMAIL)
     enroll(provider,"Provider","Demo tutor","tutor@example.test",category="Education",
            bio="One-to-one programming and mathematics tutoring.",service="Programming lesson",
            serviceDescription="Practice programming with guided exercises and individual feedback.")
@@ -82,7 +80,6 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     commands=parser.add_subparsers(dest="command",required=True)
     commands.add_parser("demo").add_argument("new_directory",type=Path)
-    commands.add_parser("activation-key")
     commands.add_parser("backup").add_argument("destination",type=Path)
     restore=commands.add_parser("restore")
     restore.add_argument("source",type=Path)
@@ -96,12 +93,6 @@ def main():
         copy_database(args.source,args.new_directory/"interval.sqlite3",True)
     elif args.command=="backup":
         copy_database(live,args.destination)
-    else:
-        if not live.is_file():
-            parser.error("Start Interval once to initialize its database.")
-        with closing(connect(live)) as db:
-            key=db.execute("SELECT value FROM settings WHERE name='activation'").fetchone()[0]
-        print(key or "The administrator is already activated.")
 
 if __name__=="__main__":
     main()

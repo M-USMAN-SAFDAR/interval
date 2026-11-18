@@ -161,7 +161,7 @@ def create_app(directory=None, *, production=False):
         db.executescript((ROOT / "backend/schema.sql").read_text())
         db.execute("INSERT OR IGNORE INTO settings VALUES('secret',?)", (secrets.token_hex(32),))
         secret = db.execute("SELECT value FROM settings WHERE name='secret'").fetchone()[0]
-        db.execute("INSERT OR IGNORE INTO settings VALUES('activation',?)", (secrets.token_urlsafe(24),))
+        db.execute("INSERT OR IGNORE INTO settings VALUES('activation','')")
     finally:
         db.close()
     app = Flask(__name__, template_folder=str(ROOT / "web/public"), static_folder=str(ROOT / "web/public"), static_url_path="")
@@ -293,10 +293,10 @@ def create_app(directory=None, *, production=False):
         password_hash = generate_password_hash(password)
         with transaction() as db:
             if role == "Administrator":
-                key = db.execute("SELECT value FROM settings WHERE name='activation'").fetchone()[0]
-                supplied = value(b,"activation",100)
-                if not key or email != ADMIN_EMAIL or not secrets.compare_digest(key.encode(),supplied.encode()):
-                    abort(403,"Administrator activation is unavailable or the setup key is incorrect.")
+                if db.execute("SELECT 1 FROM users WHERE role='Administrator'").fetchone():
+                    abort(403,"Administrator account already exists.")
+                if email != ADMIN_EMAIL:
+                    abort(400,"Use the administrator email address.")
             elif email == ADMIN_EMAIL:
                 abort(400,"Use another email address.")
             if db.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
@@ -305,8 +305,6 @@ def create_app(directory=None, *, production=False):
                                 VALUES(?,?,?,?,?,?,?)""",(name,email,password_hash,role,"pending" if professional else "active",cat,bio)).lastrowid
             if professional:
                 db.execute("INSERT INTO services(provider_id,name,category,description,minutes) VALUES(?,?,?,?,30)",(uid,service,cat,description))
-            if role=="Administrator":
-                db.execute("UPDATE settings SET value='' WHERE name='activation'")
             row = db.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
         return authenticate(row), 201
 

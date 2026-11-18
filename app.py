@@ -1,6 +1,6 @@
 import os
 from waitress import serve
-from backend.server import connect, create_app
+from backend.server import create_app
 
 production = os.getenv("INTERVAL_ENV", "local")
 if production not in {"local", "production"}:
@@ -8,12 +8,6 @@ if production not in {"local", "production"}:
 app = create_app(production=production == "production")
 
 if __name__ == "__main__":
-    if production == "local":
-        db = connect(app.config["DATABASE"])
-        key = db.execute("SELECT value FROM settings WHERE name='activation'").fetchone()[0]
-        db.close()
-        if key:
-            print("First administrator setup key:", key, flush=True)
     host = os.getenv("INTERVAL_BIND", "127.0.0.1")
     port = int(os.getenv("PORT", "5000"))
     print(f"Interval listening on {host}:{port}", flush=True)
