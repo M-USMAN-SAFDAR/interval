@@ -1,7 +1,19 @@
 'use strict';
 
 async function readResponse(response) {
-  const body = await response.json();
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    if (response.status >= 500) {
+      throw Object.assign(new Error('The server is waking up. Please wait a moment and try again.'), {status: response.status});
+    }
+    throw Object.assign(new Error('The server returned an unexpected response. Please try again.'), {status: response.status});
+  }
+  let body;
+  try {
+    body = await response.json();
+  } catch {
+    throw Object.assign(new Error('Invalid response from server. Please try again.'), {status: response.status});
+  }
   if (!response.ok) throw Object.assign(new Error(body.error || 'The request failed.'), {status:response.status});
   return body;
 }
@@ -22,8 +34,9 @@ async function refresh() {
   if (version === refreshVersion) data = snapshot;
 }
 async function refreshView(){
-  try { await refresh(); render(); }
+  try { await refresh(); }
   catch(error){ notice(error.message); }
+  render();
 }
 
 async function submitForm(form, action) {
@@ -174,7 +187,16 @@ async function startPortal() {
   try {
     await refresh();
     render();
-  } catch {
-    main.innerHTML='<section class="dashboard"><h1>Cannot reach the booking server</h1><p>Refresh the page to try again. If the problem continues, contact the studio administrator.</p></section>';
+  } catch (e) {
+    render();
+    notice('Connecting to server... Please wait a moment.');
+    setTimeout(async () => {
+      try {
+        await refresh();
+        render();
+      } catch (err) {
+        notice(err.message);
+      }
+    }, 4000);
   }
 }

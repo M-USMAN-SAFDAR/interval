@@ -351,6 +351,28 @@ def create_app(directory=None, *, production=False):
                        (value(request.json,"name",90),value(request.json,"bio",500),category(request.json),current_user.id))
         return {"ok":True}
 
+    @app.post("/api/password")
+    def change_password():
+        require("Administrator", "Provider", "Customer")
+        b = request.json
+        password = b.get("password")
+        if not isinstance(password, str) or not 8 <= len(password) <= 256:
+            abort(400, "Choose a password of 8–256 characters.")
+        with transaction() as db:
+            db.execute("UPDATE users SET password_hash=? WHERE id=?",
+                       (generate_password_hash(password), current_user.id))
+        return {"ok": True}
+
+    @app.post("/api/admin/reset")
+    def reset_admin():
+        require("Administrator")
+        with transaction() as db:
+            db.execute("DELETE FROM sessions WHERE user_id=?", (current_user.id,))
+            db.execute("DELETE FROM users WHERE id=? AND role='Administrator'", (current_user.id,))
+        logout_user()
+        session.clear()
+        return {"ok": True}
+
     @app.post("/api/services")
     @app.post("/api/services/<int:sid>")
     def services(sid=None):
