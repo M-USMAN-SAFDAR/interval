@@ -72,12 +72,14 @@ function editor(title, fields, save) {
 }
 
 function confirmChange(title, path, fields) {
+  const isDelete = fields && fields.remove === true;
   openPanel('<h2>'+esc(title)+'</h2><form id="confirm-change"><p class="hint" role="alert"></p>'+
-    '<button class="primary" type="submit">Confirm change</button></form>');
+    (isDelete ? '<p>Are you sure you want to delete this service listing? This action cannot be undone.</p>' : '')+
+    '<div class="actions"><button class="primary '+(isDelete?'danger':'')+'" type="submit">'+(isDelete?'Delete service':'Confirm change')+'</button></div></form>');
   const form = $('#confirm-change');
   form.onsubmit = event => {
     event.preventDefault();
-    submitForm(form, () => mutate(path, fields, 'Change saved'));
+    submitForm(form, () => mutate(path, fields, isDelete ? 'Service deleted' : 'Change saved'));
   };
 }
 
@@ -87,7 +89,7 @@ function input(name, label, type, initial, extra='') {
 }
 
 function categoryField(selected) {
-  return '<label>Category<select name="category">'+Object.keys(categories).map(item =>
+  return '<label>Category<select name="category" required>'+Object.keys(categories).map(item =>
     '<option '+(selected===item?'selected':'')+'>'+item+'</option>').join('')+'</select></label>';
 }
 
@@ -96,16 +98,14 @@ function textArea(name, label, initial) {
 }
 
 function serviceEditor(s) {
-  editor(s?'Edit listing':'Add service',
-    input('name','Service name','text',s?.name,'maxlength="90"')+
+  editor(s?'Edit service':'Add new service',
+    input('name','Service name','text',s?.name,'maxlength="90" placeholder="e.g. Mathematics tutoring, IT Support"')+
     categoryField(s?.cat)+textArea('description','Description',s?.desc)+
-    input('minutes','Default length in minutes','number',s?.mins||30,'min="1" max="1440"'),
-    v=>mutate(s?'services/'+s.id:'services',{...v,minutes:Number(v.minutes)},'Service saved'));
+    input('minutes','Session duration in minutes','number',s?.mins||30,'min="1" max="1440"'),
+    v=>mutate(s?'services/'+s.id:'services',{...v,minutes:Number(v.minutes)},s?'Service updated':'New service added'));
 }
 
 function managementTools() {
-  if (role==='Provider') return '<div class="actions"><button class="primary" data-tool="service">Add service</button>'+
-    '<button class="ghost" data-tool="profile">Edit profile</button></div>';
   if (role!=='Administrator') return '';
   const users=data.users.filter(u=>u.role!=='Administrator').map(u=>
     '<article class="record"><h3>'+esc(u.name)+'</h3><p>'+esc(u.email)+' · '+esc(u.role)+' · '+
@@ -177,7 +177,7 @@ async function handleAction(event) {
   if (d.slot) slotEditor(s);
   if (d.times) viewTimes(s);
   if (d.editService) serviceEditor(s);
-  if (d.removeService) confirmChange('Remove '+s.name+'?', 'services/'+s.id,{remove:true});
+  if (d.removeService) confirmChange('Delete '+s.name+'?', 'services/'+s.id,{remove:true});
   if (d.pause) await mutate('services/'+s.id,{active:!s.active},'Listing updated');
   if (d.review) await mutate('services/'+s.id,{approved:!s.approved},'Listing updated');
 }

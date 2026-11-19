@@ -65,17 +65,65 @@ async function submitAccount(form,k,register){
    await refresh();
    const intended=Number(sessionStorage.getItem('interval-intent'));
    sessionStorage.removeItem('interval-intent');
-   go(k==='customer'?(intended?'discover':'bookings'):'workspace');
+   go(k==='customer'?(intended?'discover':'appointments'):'workspace');
    if(k==='customer'&&intended)setTimeout(()=>detail(intended),0);
  } catch(err){error.textContent=err.message}
  finally{submit.disabled=false}
+}
+function profileScreen(){
+ const u=user();
+ if(!u){go('access');return}
+ const isCust=u.role==='Customer',isProv=u.role==='Provider';
+ const myAppts=data.bookings.filter(b=>customerOwns(b)).length;
+ const myServices=data.services.filter(s=>providerOwns(s)).length;
+ main.innerHTML='<section class="dashboard"><span class="eyebrow">ACCOUNT SETTINGS</span><h1>My Profile</h1><p class="intro">View and manage your account details, professional information, and password.</p><div class="profile-card"><div class="profile-header"><div class="profile-avatar">'+icon(isProv?'calendar':u.role==='Administrator'?'shield':'person')+'</div><div class="profile-info"><h2>'+esc(u.name)+'</h2><p>'+esc(u.email)+' · <span class="state">'+esc(u.role)+'</span></p></div></div><div class="profile-meta-grid"><div class="profile-meta-item"><small>Account Role</small><strong>'+esc(u.role)+'</strong></div><div class="profile-meta-item"><small>Account Status</small><strong>'+esc(u.status||(u.active?'Active':'Suspended'))+'</strong></div>'+(isCust?'<div class="profile-meta-item"><small>Total Appointments</small><strong>'+myAppts+' booked</strong></div>':'')+(isProv?'<div class="profile-meta-item"><small>Primary Category</small><strong>'+esc(u.category||'General')+'</strong></div><div class="profile-meta-item"><small>Active Services</small><strong>'+myServices+' listings</strong></div>':'')+'</div>'+(isProv&&u.bio?'<div style="background:#0e151a;border:1px solid #283238;border-radius:10px;padding:14px"><small style="color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:0.1em;display:block;margin-bottom:6px">Professional Bio</small><p style="margin:0;color:var(--ink);font-size:14px;white-space:pre-wrap">'+esc(u.bio)+'</p></div>':'')+'<div class="actions" style="margin-top:10px"><button class="primary" id="btn-edit-profile">Edit Profile Details</button><button class="ghost" id="btn-change-password">Change Password</button><button class="ghost danger" id="btn-profile-signout">Sign Out</button></div></div></section>';
+ $('#btn-edit-profile').onclick=()=>{
+  if(isProv){
+   editor('Edit Professional Profile',input('name','Full Name','text',u.name,'maxlength="90"')+categoryField(u.category)+textArea('bio','Experience and expertise',u.bio),v=>mutate('profile',v,'Profile details saved'));
+  } else {
+   editor('Edit Profile Details',input('name','Full Name','text',u.name,'maxlength="90"'),v=>mutate('profile',v,'Profile details saved'));
+  }
+ };
+ $('#btn-change-password').onclick=()=>{
+  openPanel('<h2>Change Password</h2><form id="password-form"><label>New Password<input class="field" type="password" name="password" minlength="8" maxlength="256" placeholder="At least 8 characters" required autocomplete="new-password"></label><label>Confirm New Password<input class="field" type="password" name="confirm" minlength="8" maxlength="256" placeholder="Repeat your new password" required autocomplete="new-password"></label><p class="hint" role="alert" id="password-error"></p><div class="actions"><button class="primary" type="submit">Update Password</button></div></form>');
+  const form=$('#password-form');
+  form.onsubmit=async e=>{
+   e.preventDefault();
+   const fd=new FormData(form),pw=fd.get('password'),conf=fd.get('confirm'),errEl=$('#password-error');
+   errEl.textContent='';
+   if(pw!==conf){errEl.textContent='Passwords do not match.';return}
+   try{await post('password',{password:pw});modal.close();notice('Password updated successfully')}
+   catch(err){errEl.textContent=err.message}
+  };
+ };
+ $('#btn-profile-signout').onclick=async()=>{
+  try{await post('logout',{});await refresh();notice('Signed out');go('access')}
+  catch(e){notice(e.message)}
+ };
 }
 function render(){
  document.querySelector("#workspace-links").replaceChildren();
  const u=user();role=u?.role||null;provider=u?.name||null;
  const [view='discover',which]=location.hash.slice(1).split('/');const route=view||'discover';
- const nav=document.querySelector('nav');nav.innerHTML='<a href="#discover">Discover</a><a href="'+(u?(role==='Customer'?'#bookings':'#workspace'):'#access')+'">'+(u?(role==='Customer'?'My bookings':'Workspace'):'Workspaces')+'</a>';nav.querySelectorAll('a').forEach(a=>a.classList.toggle('active',a.hash==='#'+route));
- const top=$('#roles');top.textContent=u?'Sign out':'Sign in';top.onclick=async()=>{try{if(u){await post('logout',{});await refresh();sessionStorage.removeItem('interval-intent');notice('Signed out')}go('access')}catch(e){notice(e.message)}};
+ const nav=document.querySelector('nav');
+ if(u){
+  const apptLink=role==='Customer'?'<a href="#appointments">My Appointments</a>':'<a href="#workspace">Appointments & Services</a>';
+  nav.innerHTML='<a href="#discover">Discover</a>'+apptLink+'<a href="#profile">My Profile</a>';
+ } else {
+  nav.innerHTML='<a href="#discover">Discover</a><a href="#access">Workspaces</a>';
+ }
+ nav.querySelectorAll('a').forEach(a=>{
+  const href=a.getAttribute('href');
+  a.classList.toggle('active',href==='#'+route||(href==='#appointments'&&route==='bookings'));
+ });
+ const top=$('#roles');top.textContent=u?'Sign out ('+esc(u.name.split(' ')[0])+')':'Sign in';
+ top.onclick=async()=>{try{if(u){await post('logout',{});await refresh();sessionStorage.removeItem('interval-intent');notice('Signed out')}go('access')}catch(e){notice(e.message)}};
  if(route==='login'||route==='register'){if(!Object.hasOwn(rolesInfo,which))return access();return authScreen(which,route==='register')}
- if(route==='discover')return discover();if(route==='workspace'||route==='bookings'){if(!u)return authScreen('customer',false);return board(role==='Customer'?'bookings':'workspace')}access()
+ if(route==='discover')return discover();
+ if(route==='profile')return profileScreen();
+ if(route==='workspace'||route==='bookings'||route==='appointments'){
+  if(!u)return authScreen('customer',false);
+  return board((role==='Customer'||route==='appointments')?'bookings':'workspace');
+ }
+ access();
 }

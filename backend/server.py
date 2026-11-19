@@ -16,7 +16,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 ROOT = Path(__file__).resolve().parents[1]
 ADMIN_EMAIL = "admin@interval.demo"
-CATEGORIES = {"Education", "Technology", "Consultancy", "Other"}
+CATEGORIES = {"Education", "IT Support", "Technology", "Consultancy", "Other"}
 PUBLIC_USER = "id,name,email,role,active,status,category,bio"
 
 
@@ -346,10 +346,21 @@ def create_app(directory=None, *, production=False):
     @app.post("/api/profile")
     def profile():
         with transaction() as db:
-            require("Provider")
-            db.execute("UPDATE users SET name=?,bio=?,category=? WHERE id=?",
-                       (value(request.json,"name",90),value(request.json,"bio",500),category(request.json),current_user.id))
-        return {"ok":True}
+            require("Provider", "Customer", "Administrator")
+            b = request.json
+            name = value(b, "name", 90)
+            if current_user.role == "Provider":
+                bio = value(b, "bio", 500, optional=True)
+                cat = category(b) if "category" in b else None
+                if cat:
+                    db.execute("UPDATE users SET name=?,bio=?,category=? WHERE id=?",
+                               (name, bio, cat, current_user.id))
+                else:
+                    db.execute("UPDATE users SET name=?,bio=? WHERE id=?",
+                               (name, bio, current_user.id))
+            else:
+                db.execute("UPDATE users SET name=? WHERE id=?", (name, current_user.id))
+        return {"ok": True}
 
     @app.post("/api/password")
     def change_password():

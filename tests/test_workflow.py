@@ -106,5 +106,30 @@ class Workflow(unittest.TestCase):
         self.send(self.customer,"login",dict(role="Customer",email="c@example.test",password=PASSWORD))
         self.assertEqual(self.customer.post("/api/logout",json={}).status_code,403)
 
+    def test_profile_and_password_update_and_it_support(self):
+        cid = self.register(self.customer, "Customer", "user1@example.test")
+        pid = self.register(self.provider, "Provider", "tech@example.test", category="IT Support",
+                            service="Network Support", bio="IT Specialist")
+        self.assertEqual(self.state(self.provider)["user"]["category"], "IT Support")
+
+        # Customer updates profile name
+        self.send(self.customer, "profile", dict(name="Updated Customer Name"))
+        self.assertEqual(self.state(self.customer)["user"]["name"], "Updated Customer Name")
+
+        # Provider updates profile
+        self.send(self.provider, "profile", dict(name="Lead Tech", category="IT Support", bio="Senior IT Consultant"))
+        p_user = self.state(self.provider)["user"]
+        self.assertEqual(p_user["name"], "Lead Tech")
+        self.assertEqual(p_user["bio"], "Senior IT Consultant")
+        self.assertEqual(p_user["category"], "IT Support")
+
+        # Change password
+        NEW_PW = "NewPassword123!"
+        self.send(self.customer, "password", dict(password=NEW_PW))
+        self.send(self.customer, "logout", {})
+        self.send(self.customer, "login", dict(role="Customer", email="user1@example.test", password=PASSWORD), 401)
+        self.send(self.customer, "login", dict(role="Customer", email="user1@example.test", password=NEW_PW))
+        self.assertEqual(self.state(self.customer)["user"]["name"], "Updated Customer Name")
+
 if __name__=="__main__":
     unittest.main()
